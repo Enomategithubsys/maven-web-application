@@ -1,0 +1,71 @@
+pipeline{
+  agent any   
+  tools{
+    maven 'maven3.9.9'
+  }
+  //options{}
+  //triggers   
+  stages{
+      stage('1.CloneCode'){
+        steps{
+          sh "echo Cloning the Latest app version"
+          git "https://github.com/LandmakTechnology/maven-web-application" 
+          sh "echo Cloning successful"
+        }
+      }
+      stage('2.mvnBuild'){
+          steps{
+                sh "echo 'running JUnit-test-cases' "
+                sh "echo 'testing must passed to creare artifacts' "
+                sh "echo 'mvn clean package' "
+      }
+    }
+      //stage('3.CodeQuality'){}
+      stage('4.UploadArtifacts'){
+          steps{
+              sh "mvn deploy"
+              sh "echo 'build and release completed' "
+          }
+      }
+      stage('5.Deploy2UAT'){
+          steps{
+              sh "echo Deployment is ready for client review"
+              deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://3.129.253.116:8088/')], contextPath: null, war: 'target/*war'
+          }
+      }
+      stage('6.ManualApproval'){
+        steps{
+            sh "echo review the application and confirm its performance within 5 hours"
+            timeout(time:5, unit:'HOURS'){
+             input message: 'Application ready for deployment, Please review and approve'
+            }
+          }
+      }
+      stage('7.Deploy2Prod'){
+      steps{
+            sh "echo application reviewed, approved and ready for the market"
+            deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://3.129.253.116:8088/')], contextPath: null, war: 'target/*war'
+          }
+      }
+    }
+  post{
+    always{
+emailext body: '''Hi team,
+Build status
+EcoGreenDelta-Venture
+Tel: +1 347 737 8078''', recipientProviders: [developers(), requestor(), buildUser()], subject: 'Build status', to: 'oghoje01@gmail.com'
+    }
+    success{
+        emailext body: '''Hi team,
+Build successful
+EcoGreenDelta-Venture
+Tel: +1 347 737 8078''', recipientProviders: [developers(), requestor(), buildUser()], subject: 'Build status', to: 'oghoje01@gmail.com'
+    }
+    failure{
+        emailext body: '''Hi team,
+Build failed
+EcoGreenDelta-Venture
+Tel: +1 347 737 8078''', recipientProviders: [developers(), requestor(), buildUser()], subject: 'Build status', to: 'oghoje01@gmail.com'
+    }
+  }
+}
